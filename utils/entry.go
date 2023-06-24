@@ -44,3 +44,20 @@ func sizeVarint(x uint64) (n int) {
 	}
 	return n
 }
+
+// Entry 最外层写入的结构体
+type Entry struct {
+	Key       []byte
+	Value     []byte
+	ExpiresAt uint64
+
+	Meta         byte
+	Version      uint64
+	Offset       uint32
+	Hlen         int // 头编码长度
+	ValThreshold int64
+}
+
+func (e *Entry) Entry() *Entry {
+	return e
+}
