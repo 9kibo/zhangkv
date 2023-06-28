@@ -67,7 +67,7 @@ func (s *Arena) putNode(height int) uint32 {
 func (s *Arena) putVal(v ValueStruct) uint32 {
 	l := uint32(v.EncodedSize())
 	offset := s.allocate(l)
-	v.EncodedValue(s.buf[offset:])
+	v.EncodeValue(s.buf[offset:])
 	return offset
 }
 func (s *Arena) putKey(key []byte) uint32 {
