@@ -22,8 +22,7 @@ const (
 	DefaultFileFlag                   = os.O_RDWR | os.O_CREATE | os.O_APPEND
 	DefaultFileMode                   = 0666
 	MaxValueLogSize                   = 10 << 20
-	// This is O_DSYNC (datasync) on platforms that support it -- see file_unix.go
-	datasyncFileFlag = 0x0
+	datasyncFileFlag                  = 0x0
 	// 基于可变长编码,其最可能的编码
 	MaxHeaderSize            = 21
 	VlogHeaderSize           = 0
@@ -34,14 +33,13 @@ const (
 
 // meta
 const (
-	BitDelete       byte = 1 << 0 // Set if the key has been deleted.
-	BitValuePointer byte = 1 << 1 // Set if the value is NOT stored directly next to key.
+	BitDelete       byte = 1 << 0 // 已被删除
+	BitValuePointer byte = 1 << 1 // kv分离
 )
 
 // codec
 var (
-	MagicText    = [5]byte{'Z', 'H', 'A', 'N', 'G'}
-	MagicVersion = uint32(1)
-	// CastagnoliCrcTable is a CRC32 polynomial table
+	MagicText          = [4]byte{'Z', 'H', 'K', 'V'}
+	MagicVersion       = uint32(1)
 	CastagnoliCrcTable = crc32.MakeTable(crc32.Castagnoli)
 )

@@ -141,3 +141,20 @@ func (m *MmapFile) Close() error {
 	return m.Fd.Close()
 
 }
+func (m *MmapFile) Delete() error {
+	if m.Fd == nil {
+		return nil
+	}
+
+	if err := mmap.Munmap(m.Data); err != nil {
+		return fmt.Errorf("while munmap file: %s, error: %v\n", m.Fd.Name(), err)
+	}
+	m.Data = nil
+	if err := m.Fd.Truncate(0); err != nil {
+		return fmt.Errorf("while truncate file: %s, error: %v\n", m.Fd.Name(), err)
+	}
+	if err := m.Fd.Close(); err != nil {
+		return fmt.Errorf("while close file: %s, error: %v\n", m.Fd.Name(), err)
+	}
+	return os.Remove(m.Fd.Name())
+}

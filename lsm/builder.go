@@ -273,6 +273,10 @@ func (tb *tableBuilder) flush(lm *levelManager, tableName string) (t *table, err
 	return t, nil
 }
 
+func (b block) verifyCheckSum() error {
+	return utils.VerifyChecksum(b.data, b.checksum)
+}
+
 // block迭代器
 type blockIterator struct {
 	data         []byte
@@ -360,10 +364,10 @@ func (itr *blockIterator) seekToLast() {
 }
 func (itr *blockIterator) seek(key []byte) {
 	itr.err = nil
-	startIndex := 0 // This tells from which index we should start binary search.
+	startIndex := 0
 
 	foundEntryIdx := sort.Search(len(itr.entryOffsets), func(idx int) bool {
-		// If idx is less than start index then just return false.
+
 		if idx < startIndex {
 			return false
 		}

@@ -52,7 +52,7 @@ func (ss *SSTable) SetMaxKey(maxKey []byte) {
 	ss.maxKey = maxKey
 }
 
-// initTable 初始化SStable，将其读取到内存中,返回首个key，即当前sst中的最小key
+// initTable 初始化SStable，将其索引读取到内存中,返回首个key，即当前sst中的最小key
 func (ss *SSTable) initTable() (bo *pb.BlockOffset, err error) {
 	readPos := len(ss.f.Data)
 	//从最后4位中读取校验和长度 uint32
@@ -112,4 +112,13 @@ func (ss *SSTable) Close() error {
 }
 func (ss *SSTable) Bytes(off, sz int) ([]byte, error) {
 	return ss.f.Bytes(off, sz)
+}
+func (ss *SSTable) Indexs() *pb.TableIndex {
+	return ss.idxTable
+}
+func (ss *SSTable) FID() uint64 {
+	return ss.fid
+}
+func (ss *SSTable) Delete() error {
+	return ss.f.Delete()
 }

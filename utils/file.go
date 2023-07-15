@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"hash/crc32"
+	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -49,4 +51,22 @@ func FID(name string) uint64 {
 	}
 	return uint64(id)
 
+}
+
+func SyncDir(dir string) error {
+	f, err := openDir(dir)
+	if err != nil {
+		return errors.Wrapf(err, "While opening directory: %s.", dir)
+	}
+	err = f.Sync()
+	closeErr := f.Close()
+	if err != nil {
+		return errors.Wrapf(err, "While syncing directory: %s.", dir)
+	}
+	return errors.Wrapf(closeErr, "While closing directory: %s.", dir)
+}
+func openDir(path string) (*os.File, error) { return os.Open(path) }
+
+func FileNameSSTable(dir string, id uint64) string {
+	return filepath.Join(dir, fmt.Sprintf("%05d.sst", id))
 }
