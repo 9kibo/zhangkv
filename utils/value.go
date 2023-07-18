@@ -6,6 +6,12 @@ import (
 	"unsafe"
 )
 
+type ValuePtr struct {
+	Len    uint32
+	Offset uint32
+	Fid    uint32
+}
+
 func BytesToU32(b []byte) uint32 {
 	return binary.BigEndian.Uint32(b)
 }

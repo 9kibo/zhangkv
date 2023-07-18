@@ -158,3 +158,43 @@ func (m *MmapFile) Delete() error {
 	}
 	return os.Remove(m.Fd.Name())
 }
+
+const oneGB = 1 << 30
+
+// AppendBuffer 向内存中追加一个buffer，如果空间不足则重新映射，扩大空间
+func (m *MmapFile) AppendBuffer(offset uint32, buf []byte) error {
+	size := len(m.Data)
+	needSize := len(buf)
+	end := int(offset) + needSize
+	if end > size {
+		growBy := size
+		if growBy > oneGB {
+			growBy = oneGB
+		}
+		if growBy < needSize {
+			growBy = needSize
+		}
+		if err := m.Truncature(int64(end)); err != nil {
+			return err
+		}
+	}
+	dLen := copy(m.Data[offset:end], buf)
+	if dLen != needSize {
+		return errors.Errorf("dLen != needSize AppendBuffer failed")
+	}
+	return nil
+}
+
+// Truncature 兼容接口
+func (m *MmapFile) Truncature(maxSz int64) error {
+	if err := m.Sync(); err != nil {
+		return fmt.Errorf("while sync file: %s, error: %v\n", m.Fd.Name(), err)
+	}
+	if err := m.Fd.Truncate(maxSz); err != nil {
+		return fmt.Errorf("while truncate file: %s, error: %v\n", m.Fd.Name(), err)
+	}
+
+	var err error
+	m.Data, err = mmap.Mremap(m.Data, int(maxSz)) // Mmap up to max size.
+	return err
+}

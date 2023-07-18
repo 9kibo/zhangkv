@@ -37,9 +37,3 @@ type Options struct {
 
 	DiscardStatsCh *chan map[uint32]int64
 }
-func (lsm *LSM)Close() error{
-	lsm.closer.Close()
-	if lsm.memTable != nil{
-		if err := lsm.memTable.close
-	}
-}

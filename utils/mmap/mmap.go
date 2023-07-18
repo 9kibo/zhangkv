@@ -5,6 +5,7 @@ package mmap
 import (
 	"golang.org/x/sys/unix"
 	"os"
+	"reflect"
 	"unsafe"
 )
 
@@ -30,4 +31,26 @@ func Munmap(b []byte) error {
 		return errno
 	}
 	return nil
+}
+func Mremap(data []byte, size int) ([]byte, error) {
+	const MREMAP_MAYMOVE = 0x1
+
+	header := (*reflect.SliceHeader)(unsafe.Pointer(&data))
+	mmapAddr, _, errno := unix.Syscall6(
+		unix.SYS_MREMAP,
+		header.Data,
+		uintptr(header.Len),
+		uintptr(size),
+		uintptr(MREMAP_MAYMOVE),
+		0,
+		0,
+	)
+	if errno != 0 {
+		return nil, errno
+	}
+
+	header.Data = mmapAddr
+	header.Cap = size
+	header.Len = size
+	return data, nil
 }
