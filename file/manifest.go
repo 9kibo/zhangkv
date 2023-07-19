@@ -48,6 +48,7 @@ type TableMeta struct {
 	Checksum []byte
 }
 
+// OpenManifestFile 打开或者创建manifest
 func OpenManifestFile(opt *Options) (*ManifestFile, error) {
 	//一个lsm仅有一个manifest文件
 	path := filepath.Join(opt.Dir, utils.ManifestFilename)
@@ -346,4 +347,12 @@ func (mf *ManifestFile) RevertToManifest(idMap map[uint64]struct{}) error {
 		}
 	}
 	return nil
+}
+
+// AddTableMeta 存储level表到manifest的level中
+func (mf *ManifestFile) AddTableMeta(levelNum int, t *TableMeta) (err error) {
+	mf.addChanges([]*pb.ManifestChange{
+		newCreateChange(t.ID, levelNum, t.Checksum),
+	})
+	return err
 }

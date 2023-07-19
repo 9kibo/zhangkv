@@ -304,3 +304,34 @@ func (t *table) NewIterator(options *utils.Options) utils.Iterator {
 		bi:  &blockIterator{},
 	}
 }
+
+func (t *table) Size() int64           { return int64(t.ss.Size()) }
+func (t *table) StaleDataSize() uint32 { return t.ss.Indexs().StaleDataSize }
+
+// Serach 从table中查找key
+func (t *table) Serach(key []byte, maxVs *uint64) (entry *utils.Entry, err error) {
+	t.IncrRef()
+	defer t.DecrRef()
+	// 获取索引
+	idx := t.ss.Indexs()
+	// 检查key是否存在
+	bloomFilter := utils.Filter(idx.BloomFilter)
+	if t.ss.HasBloomFilter() && !bloomFilter.MayContainKey(key) {
+		return nil, utils.ErrKeyNotFound
+	}
+	iter := t.NewIterator(&utils.Options{})
+	defer iter.Close()
+
+	iter.Seek(key)
+	if !iter.Valid() {
+		return nil, utils.ErrKeyNotFound
+	}
+
+	if utils.SameKey(key, iter.Item().Entry().Key) {
+		if version := utils.ParseTs(iter.Item().Entry().Key); *maxVs < version {
+			*maxVs = version
+			return iter.Item().Entry(), nil
+		}
+	}
+	return nil, utils.ErrKeyNotFound
+}

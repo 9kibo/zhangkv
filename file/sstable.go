@@ -122,3 +122,23 @@ func (ss *SSTable) FID() uint64 {
 func (ss *SSTable) Delete() error {
 	return ss.f.Delete()
 }
+
+// Size 返回底层文件的尺寸
+func (ss *SSTable) Size() int64 {
+	fileStats, err := ss.f.Fd.Stat()
+	utils.Panic(err)
+	return fileStats.Size()
+}
+
+func (ss *SSTable) MinKey() []byte {
+	return ss.minKey
+}
+
+// HasBloomFilter _
+func (ss *SSTable) HasBloomFilter() bool {
+	return ss.hasBloomFilter
+}
+
+func (ss *SSTable) MaxKey() []byte {
+	return ss.maxKey
+}

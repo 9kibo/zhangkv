@@ -48,6 +48,13 @@ type buildData struct {
 	size      int
 }
 
+func newTableBuiler(opt *Options) *tableBuilder {
+	return &tableBuilder{
+		opt:     opt,
+		sstSize: opt.SSTableMaxSz,
+	}
+}
+
 const headerSize = uint16(unsafe.Sizeof(header{}))
 
 func (h *header) decode(buf []byte) {
