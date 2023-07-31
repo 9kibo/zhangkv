@@ -23,7 +23,7 @@ type SSTable struct {
 	idxLen         int
 	idxStart       int
 	fid            uint64
-	createAt       time.Time
+	createdAt      time.Time
 }
 
 func OpenSStable(opt *Options) *SSTable {
@@ -40,7 +40,7 @@ func (ss *SSTable) Init() error {
 	//获取创建时间
 	stat, _ := ss.f.Fd.Stat()
 	statType := stat.Sys().(*syscall.Stat_t)
-	ss.createAt = time.Unix(statType.Ctim.Sec, statType.Ctim.Nsec)
+	ss.createdAt = time.Unix(statType.Ctim.Sec, statType.Ctim.Nsec)
 	keyBytes := ko.GetKey()
 	minKey := make([]byte, len(keyBytes))
 	copy(minKey, keyBytes)
@@ -141,4 +141,19 @@ func (ss *SSTable) HasBloomFilter() bool {
 
 func (ss *SSTable) MaxKey() []byte {
 	return ss.maxKey
+}
+
+// GetCreatedAt _
+func (ss *SSTable) GetCreatedAt() *time.Time {
+	return &ss.createdAt
+}
+
+// SetCreatedAt _
+func (ss *SSTable) SetCreatedAt(t *time.Time) {
+	ss.createdAt = *t
+}
+
+// Detele _
+func (ss *SSTable) Detele() error {
+	return ss.f.Delete()
 }

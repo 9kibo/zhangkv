@@ -65,6 +65,14 @@ func (lm *levelManager) loadManifest() (err error) {
 	lm.manifestFile, err = file.OpenManifestFile(&file.Options{Dir: lm.opt.WorkDir})
 	return err
 }
+func (lm *levelManager) iterators() []utils.Iterator {
+
+	itrs := make([]utils.Iterator, 0, len(lm.levels))
+	for _, level := range lm.levels {
+		itrs = append(itrs, level.iterators()...)
+	}
+	return itrs
+}
 
 func (lm *levelManager) build() error {
 	lm.levels = make([]*levelHandler, 0, lm.opt.MaxLevelNum)
@@ -213,4 +221,109 @@ func (lh *levelHandler) getTable(key []byte) *table {
 		}
 	}
 	return nil
+}
+func (lh *levelHandler) getTotalSize() int64 {
+	lh.RLock()
+	defer lh.RUnlock()
+	return lh.totalSize
+}
+
+// 返回该层级的table数量
+func (lh *levelHandler) numTables() int {
+	lh.RLock()
+	defer lh.RUnlock()
+	return len(lh.tables)
+}
+
+type levelHandlerRLocked struct{}
+
+// overlappingTables 返回keyRange对应的tables ，使用时需要获取到读锁保证并发安全
+func (lh *levelHandler) overlappingTables(_ levelHandlerRLocked, kr keyRange) (int, int) {
+	if len(kr.left) == 0 || len(kr.right) == 0 {
+		return 0, 0
+	}
+	left := sort.Search(len(lh.tables), func(i int) bool {
+		return utils.CompareKeys(kr.left, lh.tables[i].ss.MaxKey()) <= 0
+	})
+	right := sort.Search(len(lh.tables), func(i int) bool {
+		return utils.CompareKeys(kr.right, lh.tables[i].ss.MaxKey()) < 0
+	})
+	return left, right
+}
+func (lh *levelHandler) isLastLevel() bool {
+	return lh.levelNum == lh.lm.opt.MaxLevelNum-1
+}
+func (lh *levelHandler) iterators() []utils.Iterator {
+	lh.RLock()
+	defer lh.RUnlock()
+	topt := &utils.Options{IsAsc: true}
+	if lh.levelNum == 0 {
+		return iteratorsReversed(lh.tables, topt)
+	}
+
+	if len(lh.tables) == 0 {
+		return nil
+	}
+	return []utils.Iterator{NewConcatIterator(lh.tables, topt)}
+}
+
+// replaceTables 更新tables
+func (lh *levelHandler) replaceTables(toDel, toAdd []*table) error {
+	lh.Lock()
+
+	toDelMap := make(map[uint64]struct{})
+	for _, t := range toDel {
+		toDelMap[t.fid] = struct{}{}
+	}
+	var newTables []*table
+	for _, t := range lh.tables {
+		_, found := toDelMap[t.fid]
+		if !found {
+			newTables = append(newTables, t)
+			continue
+		}
+		lh.subtractSize(t)
+	}
+	for _, t := range toAdd {
+		lh.addSize(t)
+		t.IncrRef()
+		newTables = append(newTables, t)
+	}
+
+	lh.tables = newTables
+	sort.Slice(lh.tables, func(i, j int) bool {
+		return utils.CompareKeys(lh.tables[i].ss.MinKey(), lh.tables[i].ss.MinKey()) < 0
+	})
+	lh.Unlock()
+	return decrRefs(toDel)
+}
+func (lh *levelHandler) subtractSize(t *table) {
+	lh.totalSize -= t.Size()
+	lh.totalStaleSize -= int64(t.StaleDataSize())
+}
+
+// deleteTables remove tables
+func (lh *levelHandler) deleteTables(toDel []*table) error {
+	lh.Lock()
+
+	toDelMap := make(map[uint64]struct{})
+	for _, t := range toDel {
+		toDelMap[t.fid] = struct{}{}
+	}
+
+	// 创建副本并替换，因为迭代器可能会保留原版本的切片
+	var newTables []*table
+	for _, t := range lh.tables {
+		_, found := toDelMap[t.fid]
+		if !found {
+			newTables = append(newTables, t)
+			continue
+		}
+		lh.subtractSize(t)
+	}
+	lh.tables = newTables
+
+	lh.Unlock()
+
+	return decrRefs(toDel)
 }

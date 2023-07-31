@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 	"sync/atomic"
+	"time"
 	"zhangkv/file"
 	"zhangkv/pb"
 	"zhangkv/utils"
@@ -202,7 +203,7 @@ func (it *tableIterator) Next() {
 }
 
 func (it *tableIterator) Valid() bool {
-	return it.err != nil
+	return it.err != io.EOF
 }
 
 func (it *tableIterator) Rewind() {
@@ -334,4 +335,15 @@ func (t *table) Serach(key []byte, maxVs *uint64) (entry *utils.Entry, err error
 		}
 	}
 	return nil, utils.ErrKeyNotFound
+}
+func (t *table) GetCreatedAt() *time.Time {
+	return t.ss.GetCreatedAt()
+}
+func decrRefs(tables []*table) error {
+	for _, table := range tables {
+		if err := table.DecrRef(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

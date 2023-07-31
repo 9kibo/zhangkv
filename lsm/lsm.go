@@ -66,6 +66,15 @@ func NewLSM(opt *Options) *LSM {
 	lsm.closer = utils.NewCloser()
 	return lsm
 }
+
+// StartCompacter 开启压缩
+func (lsm *LSM) StartCompacter() {
+	n := lsm.options.NumCompactors
+	lsm.closer.Add(n)
+	for i := 0; i < n; i++ {
+		go lsm.levels.runCompacter(i)
+	}
+}
 func (lsm *LSM) Set(entry *utils.Entry) (err error) {
 	if entry == nil || len(entry.Key) == 0 {
 		return utils.ErrEmptyKey

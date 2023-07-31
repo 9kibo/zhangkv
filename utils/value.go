@@ -6,12 +6,25 @@ import (
 	"unsafe"
 )
 
+const (
+	// size of vlog header.
+	// +----------------+------------------+
+	// | keyID(8 bytes) |  baseIV(12 bytes)|
+	// +----------------+------------------+
+	ValueLogHeaderSize = 20
+	vptrSize           = unsafe.Sizeof(ValuePtr{})
+)
+
 type ValuePtr struct {
 	Len    uint32
 	Offset uint32
 	Fid    uint32
 }
 
+func (p *ValuePtr) Decode(b []byte) {
+	// Copy over data from b into p. Using *p=unsafe.pointer(...) leads to
+	copy(((*[vptrSize]byte)(unsafe.Pointer(p))[:]), b[:vptrSize])
+}
 func BytesToU32(b []byte) uint32 {
 	return binary.BigEndian.Uint32(b)
 }

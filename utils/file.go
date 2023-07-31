@@ -88,3 +88,8 @@ func LoadIDMap(dir string) map[uint64]struct{} {
 	}
 	return idMap
 }
+func Copy(a []byte) []byte {
+	b := make([]byte, len(a))
+	copy(b, a)
+	return b
+}

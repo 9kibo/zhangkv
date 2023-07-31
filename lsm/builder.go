@@ -48,12 +48,19 @@ type buildData struct {
 	size      int
 }
 
+func newTableBuilerWithSSTSize(opt *Options, size int64) *tableBuilder {
+	return &tableBuilder{
+		opt:     opt,
+		sstSize: size,
+	}
+}
 func newTableBuiler(opt *Options) *tableBuilder {
 	return &tableBuilder{
 		opt:     opt,
 		sstSize: opt.SSTableMaxSz,
 	}
 }
+func (tb *tableBuilder) empty() bool { return len(tb.keyHashes) == 0 }
 
 const headerSize = uint16(unsafe.Sizeof(header{}))
 
@@ -279,9 +286,24 @@ func (tb *tableBuilder) flush(lm *levelManager, tableName string) (t *table, err
 	copy(dst, buf)
 	return t, nil
 }
-
+func (tb *tableBuilder) ReachedCapacity() bool {
+	return tb.estimateSz > tb.sstSize
+}
 func (b block) verifyCheckSum() error {
 	return utils.VerifyChecksum(b.data, b.checksum)
+}
+
+// AddStaleKey 记录陈旧key所占用的空间大小，用于日志压缩时的决策
+func (tb *tableBuilder) AddStaleKey(e *utils.Entry) {
+	tb.staleDataSize += len(e.Key) + len(e.Value) + 4 /* entry offset */ + 4 /* header size */
+	tb.add(e, true)
+}
+
+// AddKey _
+func (tb *tableBuilder) AddKey(e *utils.Entry) {
+	tb.add(e, false)
+}
+func (tb *tableBuilder) Close() {
 }
 
 // block迭代器
