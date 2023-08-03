@@ -599,7 +599,7 @@ func (lm *levelManager) runCompactDef(id, l int, cd compactDef) (err error) {
 	if len(cd.splits) == 0 {
 		cd.splits = append(cd.splits, keyRange{})
 	}
-	newTables, decr, err := lm.compactBuildTbales(l, cd)
+	newTables, decr, err := lm.compactBuildTables(l, cd)
 	if err != nil {
 		return err
 	}
@@ -652,7 +652,7 @@ func tablesToString(tables []*table) []string {
 }
 
 // compactBuildTables 合并两个层的sst文件
-func (lm *levelManager) compactBuildTbales(lev int, cd compactDef) ([]*table, func() error, error) {
+func (lm *levelManager) compactBuildTables(lev int, cd compactDef) ([]*table, func() error, error) {
 	topTables := cd.top
 	botTables := cd.bot
 	iterOpt := &utils.Options{
@@ -664,6 +664,8 @@ func (lm *levelManager) compactBuildTbales(lev int, cd compactDef) ([]*table, fu
 		case lev == 0:
 			//l0层
 			iters = append(iters, iteratorsReversed(topTables, iterOpt)...)
+		case len(topTables) > 0:
+			iters = []utils.Iterator{topTables[0].NewIterator(iterOpt)}
 		}
 		return append(iters, NewConcatIterator(botTables, iterOpt))
 	}
